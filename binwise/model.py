@@ -9,13 +9,21 @@ from .utils import convert_to_bins
 
 class RegressionToClassificationEnsemble(BaseEstimator, ClassifierMixin):
     def __init__(
-        self, base_model_constructor, bin_sizes, binning_strategies, subsample_ratio=1
+        self,
+        base_model_constructor,
+        bin_sizes,
+        binning_strategies,
+        subsample_ratio=1.0,
+        random_state=None,
     ):
         self.base_model_constructor = base_model_constructor
         self.bin_sizes = bin_sizes
         self.binning_strategies = binning_strategies
         self.subsample_ratio = subsample_ratio
+        self.random_state = random_state
+
         self._models = []
+        self._rng = np.random.default_rng(self.random_state)
 
     def fit(self, X, y):
         self._models = []
@@ -59,7 +67,7 @@ class RegressionToClassificationEnsemble(BaseEstimator, ClassifierMixin):
 
     def _random_subsample(self, X, y):
         num_samples = int(len(X) * self.subsample_ratio)
-        idx = np.random.choice(len(X), num_samples, replace=False)
+        idx = self._rng.choice(len(X), num_samples, replace=False)
         return X[idx], y[idx]
 
 
