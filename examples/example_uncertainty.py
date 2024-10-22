@@ -13,6 +13,7 @@ from binwise import RegressionToClassificationEnsemble, RegressionToClassificati
 
 # Helper functions for model evaluation
 def evaluate_model(model, X_test, y_test, model_name):
+    """Evaluates model performance using RMSE and R2 score."""
     y_pred = model.predict(X_test)
     rmse = root_mean_squared_error(y_test, y_pred)
     r2 = r2_score(y_test, y_pred)
@@ -21,6 +22,7 @@ def evaluate_model(model, X_test, y_test, model_name):
 
 
 def evaluate_crps(model, X_test, y_test, model_name):
+    """Evaluates model uncertainty using Continuous Ranked Probability Score (CRPS)."""
     y_pred = model.predict_proba(X_test, return_std=True)
     y_pred_mean, y_pred_std = y_pred["mean"], y_pred["std"]
     crps = ps.crps_gaussian(y_test, y_pred_mean, y_pred_std)
@@ -33,13 +35,13 @@ def evaluate_crps(model, X_test, y_test, model_name):
 dataset = load_diabetes()
 X, y = dataset.data, dataset.target
 
-# Normalize the target variable to makes the CRPS values more interpretable
+# We can normalize the target variable to makes CRPS values more interpretable in this example:
 y = (y - y.mean()) / y.std()
 
-# Split the data into three parts:
-# - Training set: Used to train the models
-# - Calibration set: Used by methods that need separate calibration set (like Conformal Prediction)
-# - Test set: Used to evaluate the models
+# We will split data into three parts for the fair comparison:
+# - Training set: Used to train the base models
+# - Calibration set: Used by methods requiring calibration (e.g., Conformal Prediction)
+# - Test set: Used for final evaluation of all methods
 X_train_full, X_test, y_train_full, y_test = train_test_split(
     X, y, test_size=0.25, random_state=42
 )
@@ -47,22 +49,21 @@ X_train, X_cal, y_train, y_cal = train_test_split(
     X_train_full, y_train_full, test_size=0.1875, random_state=42
 )
 
-# List to store the results for final comparison
-results = []
 
-# 1. RandomForest Regressor (Baseline with Conformal Prediction)
-# We'll use this as our baseline, applying Conformal Prediction for uncertainty estimation
+# 1. RandomForest Regressor with Inductive Conformal Prediction
+# We will start with a simple baseline approach: RandomForest Regressor for predictions,
+# Inductive Conformal Prediction for uncertainty estimation
 rf_reg = RandomForestRegressor(n_estimators=100, random_state=42)
 rf_reg.fit(X_train, y_train)
 rmse, r2 = evaluate_model(rf_reg, X_test, y_test, "RandomForest Regressor")
 
-# Set up Conformal Prediction
+# Let's set up Inductive Conformal Prediction for uncertainty estimation:
 nc = RegressorNc(rf_reg, AbsErrorErrFunc())
 icp = IcpRegressor(nc)
 icp.calibrate(X_cal, y_cal)
 
-# Calculate CRPS using predictions from Conformal Prediction
-# We generate predictions for multiple significance levels to approximate distribution
+# We will calculate CRPS using predictions from Inductive Conformal Prediction.
+# Let's generate predictions for multiple significance levels to approximate distribution:
 significance_range = np.arange(0.005, 0.995, 0.005)
 y_icp_pred = np.zeros((X_test.shape[0], significance_range.shape[0] * 2))
 
@@ -74,12 +75,16 @@ for j, alpha in enumerate(significance_range):
 y_pred_mean = np.mean(y_icp_pred, axis=1)
 y_pred_std = np.std(y_icp_pred, axis=1)
 icp_crps = ps.crps_gaussian(y_test, y_pred_mean, y_pred_std)
-print(f"RandomForest Regressor ICP CRPS: {icp_crps.mean():.4f}")
+print(f"RandomForest Regressor ICP - CRPS: {icp_crps.mean():.4f}")
 
-results.append(["RandomForest Regressor", rmse, r2, icp_crps.mean()])
+# Output:
+# RandomForest Regressor - RMSE: 0.7016, R2: 0.4721
+# RandomForest Regressor ICP - CRPS: 0.3987
 
-# 2. RandomForest with RegressionToClassificationModel
-# Let's try the basic version of our approach with RandomForest
+
+# 2. RandomForest Classifier with RegressionToClassificationModel
+# Let's try RandomForest Classifier implementation with our adapter
+# and see how it performs for uncertainty estimation:
 rf_class = RegressionToClassificationModel(
     model_constructor=lambda: RandomForestClassifier(n_estimators=100, random_state=42),
     n_bins=10,
@@ -92,10 +97,15 @@ rmse, r2 = evaluate_model(
 crps = evaluate_crps(
     rf_class, X_test, y_test, "RandomForest with RegressionToClassificationModel"
 )
-results.append(["RandomForest with RegressionToClassificationModel", rmse, r2, crps])
+# RandomForest with RegressionToClassificationModel - RMSE: 0.7120, R2: 0.4564
+# RandomForest with RegressionToClassificationModel - CRPS: 0.3985
 
-# 3. RandomForest with RegressionToClassificationEnsemble
-# Now, let's try the ensemble version that combines multiple bin configurations
+# As we can see our model performs slightly worse but already outputs better 
+# uncertainty estimates. Let's see if we can improve it!
+
+
+# 3. RandomForest Classifier with RegressionToClassificationEnsemble
+# We will try to improve our model by using an ensemble of different bin sizes and strategies:
 rf_ensemble = RegressionToClassificationEnsemble(
     base_model_constructor=lambda: RandomForestClassifier(
         n_estimators=100, random_state=42
@@ -112,10 +122,16 @@ rmse, r2 = evaluate_model(
 crps = evaluate_crps(
     rf_ensemble, X_test, y_test, "RandomForest with RegressionToClassificationEnsemble"
 )
-results.append(["RandomForest with RegressionToClassificationEnsemble", rmse, r2, crps])
+# Output:
+# RandomForest with RegressionToClassificationEnsemble - RMSE: 0.6981, R2: 0.4774
+# RandomForest with RegressionToClassificationEnsemble - CRPS: 0.3889
+
+# Now our model performs better and outputs better uncertainty estimates!
+
 
 # 4. TabPFN with RegressionToClassificationModel
-# Let's try TabPFN, which is designed for small datasets but only available for classification
+# But what about models that don't even have a regression implementation?
+# Let's try TabPFN, which has shown good performance for small classification datasets in benchmark studies.
 tabpfn_class = RegressionToClassificationModel(
     model_constructor=lambda: TabPFNClassifier(
         device="cpu", N_ensemble_configurations=1
@@ -130,10 +146,15 @@ rmse, r2 = evaluate_model(
 crps = evaluate_crps(
     tabpfn_class, X_test, y_test, "TabPFN with RegressionToClassificationModel"
 )
-results.append(["TabPFN with RegressionToClassificationModel", rmse, r2, crps])
+# Output:
+# TabPFN with RegressionToClassificationModel - RMSE: 0.6956, R2: 0.4812
+# TabPFN with RegressionToClassificationModel - CRPS: 0.3799
+
+# TabPFN shows promising results - better prediction accuracy and improved uncertainty estimates.
+
 
 # 5. TabPFN with RegressionToClassificationEnsemble
-# Finally, we will combine TabPFN with our ensemble approach
+# Let's combine TabPFN with our ensemble of different bin sizes and strategies:
 tabpfn_ensemble = RegressionToClassificationEnsemble(
     base_model_constructor=lambda: TabPFNClassifier(
         device="cpu", N_ensemble_configurations=1
@@ -150,94 +171,23 @@ rmse, r2 = evaluate_model(
 crps = evaluate_crps(
     tabpfn_ensemble, X_test, y_test, "TabPFN with RegressionToClassificationEnsemble"
 )
-results.append(["TabPFN with RegressionToClassificationEnsemble", rmse, r2, crps])
+# Output:
+# TabPFN with RegressionToClassificationEnsemble - RMSE: 0.6828, R2: 0.5000
+# TabPFN with RegressionToClassificationEnsemble - CRPS: 0.3733
 
-print("\n--- Models trained on full dataset (train + calibration) ---\n")
+# The ensemble approach improves our results even further! We get better scores across all metrics.
 
-# Now let's try training models on the full training dataset (without holding out calibration set)
-# This gives our approach an advantage since it doesn't need a separate calibration set
 
-# 6. RandomForest with RegressionToClassificationModel (Full Dataset)
-rf_class_full = RegressionToClassificationModel(
-    model_constructor=lambda: RandomForestClassifier(n_estimators=100, random_state=42),
-    n_bins=10,
-    binning_strategy="Uniform",
-)
-rf_class_full.fit(X_train_full, y_train_full)
-rmse, r2 = evaluate_model(
-    rf_class_full,
-    X_test,
-    y_test,
-    "RandomForest with RegressionToClassificationModel (Full Dataset)",
-)
-crps = evaluate_crps(
-    rf_class_full,
-    X_test,
-    y_test,
-    "RandomForest with RegressionToClassificationModel (Full Dataset)",
-)
-results.append(
-    ["RandomForest with RegressionToClassificationModel (Full Dataset)", rmse, r2, crps]
-)
+# So far TabPFN with our ensemble shows the best results - but we have an additional big advantage:
+# we don't need to set aside data for calibration! Let's use this advantage and train our best model
+# on all available training data. The test set stays the same to make sure the comparison is fair.
 
-# 7. RandomForest with RegressionToClassificationEnsemble (Full Dataset)
-rf_ensemble_full = RegressionToClassificationEnsemble(
-    base_model_constructor=lambda: RandomForestClassifier(
-        n_estimators=100, random_state=42
-    ),
-    bin_sizes=[5, 10, 15],
-    binning_strategies=["Uniform", "Quantile"],
-    subsample_ratio=1.0,
-    random_state=42,
-)
-rf_ensemble_full.fit(X_train_full, y_train_full)
-rmse, r2 = evaluate_model(
-    rf_ensemble_full,
-    X_test,
-    y_test,
-    "RandomForest with RegressionToClassificationEnsemble (Full Dataset)",
-)
-crps = evaluate_crps(
-    rf_ensemble_full,
-    X_test,
-    y_test,
-    "RandomForest with RegressionToClassificationEnsemble (Full Dataset)",
-)
-results.append(
-    [
-        "RandomForest with RegressionToClassificationEnsemble (Full Dataset)",
-        rmse,
-        r2,
-        crps,
-    ]
-)
 
-# 8. TabPFN with RegressionToClassificationModel (Full Dataset)
-tabpfn_class_full = RegressionToClassificationModel(
-    model_constructor=lambda: TabPFNClassifier(
-        device="cpu", N_ensemble_configurations=1
-    ),
-    n_bins=10,
-    binning_strategy="Uniform",
-)
-tabpfn_class_full.fit(X_train_full, y_train_full)
-rmse, r2 = evaluate_model(
-    tabpfn_class_full,
-    X_test,
-    y_test,
-    "TabPFN with RegressionToClassificationModel (Full Dataset)",
-)
-crps = evaluate_crps(
-    tabpfn_class_full,
-    X_test,
-    y_test,
-    "TabPFN with RegressionToClassificationModel (Full Dataset)",
-)
-results.append(
-    ["TabPFN with RegressionToClassificationModel (Full Dataset)", rmse, r2, crps]
-)
+# 6. TabPFN with RegressionToClassificationEnsemble (Full Dataset)
+# We continue with the best performing approach - TabPFN with our ensemble of different bin sizes
+# and strategies. We will use this approach with all of the available training data, without
+# separating a calibration dataset.
 
-# 9. TabPFN with RegressionToClassificationEnsemble (Full Dataset)
 tabpfn_ensemble_full = RegressionToClassificationEnsemble(
     base_model_constructor=lambda: TabPFNClassifier(
         device="cpu", N_ensemble_configurations=1
@@ -260,13 +210,16 @@ crps = evaluate_crps(
     y_test,
     "TabPFN with RegressionToClassificationEnsemble (Full Dataset)",
 )
-results.append(
-    ["TabPFN with RegressionToClassificationEnsemble (Full Dataset)", rmse, r2, crps]
-)
 
-# Print final comparison table
-print("\n--- Summary Table ---\n")
-print(f"{'Model':<70} {'RMSE':<10} {'R2':<10} {'CRPS':<10}")
-print("-" * 100)
-for result in results:
-    print(f"{result[0]:<70} {result[1]:<10.4f} {result[2]:<10.4f} {result[3]:<10.4f}")
+# Output:
+# TabPFN with RegressionToClassificationEnsemble (Full Dataset) - RMSE: 0.6627, R2: 0.5291
+# TabPFN with RegressionToClassificationEnsemble (Full Dataset) - CRPS: 0.3611
+
+# Using the full training dataset gives us the best results yet! This showcases a key advantage 
+# of our approach - we don't need to reserve data for calibration like other uncertainty estimation
+# methods do, and we see even further improvements.
+
+# What's next?
+# - Try this on your own data, especially if you have a small dataset
+# - Don't forget to use proper cross-validation for more reliable results
+# - Experiment with the base model parameters - maybe you can achieve even better performance
