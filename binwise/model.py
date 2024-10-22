@@ -24,6 +24,7 @@ class RegressionToClassificationEnsemble(BaseEstimator, ClassifierMixin):
 
         self._models = []
         self._rng = np.random.default_rng(self.random_state)
+        self.is_fitted_ = False
 
     def fit(self, X, y):
         self._models = []
@@ -36,6 +37,7 @@ class RegressionToClassificationEnsemble(BaseEstimator, ClassifierMixin):
             X_subsample, y_subsample = self._random_subsample(X, y)
             model.fit(X_subsample, y_subsample)
             self._models.append(model)
+        self.is_fitted_ = True
         return self
 
     def predict(self, X, return_std=False):
@@ -81,6 +83,7 @@ class RegressionToClassificationModel(BaseEstimator, ClassifierMixin):
         self._label_encoder = LabelEncoder()
         self._bin_middles = None
         self._all_classes = None
+        self.is_fitted_ = False
 
     def fit(self, X, y):
         bin_labels, _, self._bin_middles = convert_to_bins(
@@ -94,6 +97,7 @@ class RegressionToClassificationModel(BaseEstimator, ClassifierMixin):
 
         self._base_model = self.model_constructor()
         self._base_model.fit(X, y_train)
+        self.is_fitted_ = True
         return self
 
     def predict(self, X, return_std=False):
