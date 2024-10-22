@@ -1,8 +1,12 @@
-# binwise - binning adapter for regression tasks
+# Binwise
+Enable classification models for regression tasks and provide uncertainty estimation.
 
-Implementation of the binned uncertainty estimation ensemble method, as described in paper "An Efficient Model-Agnostic Approach for Uncertainty Estimation in Data-Restricted Pedometric Applications" (Barkov et al., 2024).
+## Introduction
+Implementation of the binned uncertainty estimation ensemble method, as described in the paper "An Efficient Model-Agnostic Approach for Uncertainty Estimation in Data-Restricted Pedometric Applications" (Barkov et al., 2024).
 
-The Bin Adapter transforms regression tasks into classification problems, enabling the use of classification algorithms for regression and providing uncertainty estimates. This approach is particularly useful in scenarios with limited training data, such as in pedometrics and digital soil mapping.
+Binwise serves as an adapter that allows you to apply classification algorithms to regression problems by discretizing the continuous target into bins. The approach not only enables the use of classification models for regression tasks but also can provide uncertainty estimates.
+
+This approach is particularly useful in scenarios with limited training data, as demonstrated in applications like pedometrics and digital soil mapping.
 
 ## Features
 
@@ -35,9 +39,9 @@ y_pred = tabpfn_ensemble.predict(X_test)
 
 For more detailed examples, check out the following notebooks:
 
-[Basic Regression Prediction](examples/diabetes_prediction.ipynb): Demonstrates how to use the binning adapter for regression prediction on the diabetes dataset.
+[Regression Predictions](examples/diabetes_prediction.ipynb): Using classification model (TabPFN) for regression task
 
-[Regression with Uncertainty Estimation](examples/diabetes_uncertainty.ipynb): Shows how to obtain uncertainty estimates along with predictions using the binning adapter.
+[Regression Predictions with Uncertainty Estimation](examples/diabetes_uncertainty.ipynb): Obtaining uncertainty estimates along with predictions
 
 ## Citation
 
