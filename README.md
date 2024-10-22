@@ -39,9 +39,9 @@ y_pred = tabpfn_ensemble.predict(X_test)
 
 For more detailed examples, check out the following notebooks:
 
-[Regression Predictions](examples/diabetes_prediction.ipynb): Using classification model (TabPFN) for regression task
+[Regression Predictions](examples/example.py): Using classification model (TabPFN) for regression task
 
-[Regression Predictions with Uncertainty Estimation](examples/diabetes_uncertainty.ipynb): Obtaining uncertainty estimates along with predictions
+[Regression Predictions with Uncertainty Estimation](examples/example_uncertainty.py): Obtaining uncertainty estimates along with predictions
 
 ## Citation
 
