@@ -1,13 +1,14 @@
+from itertools import product
+
 import numpy as np
-from sklearn.base import BaseEstimator, ClassifierMixin
+from sklearn.base import BaseEstimator, RegressorMixin
 from sklearn.preprocessing import LabelEncoder
 from sklearn.utils.validation import check_is_fitted
-from itertools import product
 
 from .utils import convert_to_bins
 
 
-class RegressionToClassificationEnsemble(BaseEstimator, ClassifierMixin):
+class RegressionToClassificationEnsemble(BaseEstimator, RegressorMixin):
     def __init__(
         self,
         base_model_constructor,
@@ -73,7 +74,7 @@ class RegressionToClassificationEnsemble(BaseEstimator, ClassifierMixin):
         return X[idx], y[idx]
 
 
-class RegressionToClassificationModel(BaseEstimator, ClassifierMixin):
+class RegressionToClassificationModel(BaseEstimator, RegressorMixin):
     def __init__(self, model_constructor, n_bins, binning_strategy):
         self.model_constructor = model_constructor
         self.n_bins = n_bins
