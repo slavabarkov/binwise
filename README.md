@@ -2,7 +2,7 @@
 Enable classification models for regression tasks and provide uncertainty estimation.
 
 ## Introduction
-Implementation of the binned uncertainty estimation ensemble method, as described in the paper "An Efficient Model-Agnostic Approach for Uncertainty Estimation in Data-Restricted Pedometric Applications" (Barkov et al., 2024).
+Implementation of the binned uncertainty estimation ensemble method, as described in the paper ["An Efficient Model-Agnostic Approach for Uncertainty Estimation in Data-Restricted Pedometric Applications"](https://arxiv.org/abs/2409.11985) (Barkov et al., 2024).
 
 Binwise serves as an adapter that allows you to apply classification algorithms to regression problems by discretizing the continuous target into bins. The approach not only enables the use of classification models for regression tasks but also can provide uncertainty estimates.
 
