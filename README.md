@@ -48,14 +48,13 @@ For more detailed examples, check out the following notebooks:
 If you use this code in your research, please cite:
 
 ```bibtex
-@misc{barkov2024uncertainty,
-      title={An Efficient Model-Agnostic Approach for Uncertainty Estimation in Data-Restricted Pedometric Applications}, 
-      author={Viacheslav Barkov and Jonas Schmidinger and Robin Gebbers and Martin Atzmueller},
-      year={2024},
-      eprint={2409.11985},
-      archivePrefix={arXiv},
-      primaryClass={cs.LG},
-      url={https://arxiv.org/abs/2409.11985}, 
+@inproceedings{barkov2024uncertainty,
+  author    = {Barkov, Viacheslav and Schmidinger, Jonas and Gebbers, Robin and Atzmueller, Martin},
+  booktitle = {2024 International Conference on Machine Learning and Applications (ICMLA)},
+  title     = {An Efficient Model-Agnostic Approach for Uncertainty Estimation in Data-Restricted Pedometric Applications},
+  year      = {2024},
+  pages     = {198-205},
+  doi       = {10.1109/ICMLA61862.2024.00033}
 }
 ```
 
